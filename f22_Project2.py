@@ -8,11 +8,7 @@ import unittest
 
 
 def get_listings_from_search_results(html_file):
-    # url = "https://www.airbnb.com/s/Mission-District--San-Francisco--California--United-States/homes?tab_id=home_tab&refinement_paths%5B%5D=/homes&flexible_trip_lengths%5B%5D=one_week&price_filter_input_type=0&query=Mission%20District,%20San%20Francisco,%20CA&place_id=ChIJIzOAXzx-j4ARiVHkPQcAWAM&date_picker_type=calendar&source=structured_search_input_header&search_type=autocomplete_click&federated_search_session_id=73145d57-bee5-41b1-adee-3576e3f695e6&pagination_search=true"
-    # resp = requests.get(url)
-    # soup = BeautifulSoup(resp.content, 'html.parser')
-    # finds name of place and id 
-    # names = html_file.find_all("div", class_ = "t1jojoys dir dir-ltr")
+   
     with open(html_file, encoding="utf-8") as f:
         data = f.read()
         soup = BeautifulSoup(data, 'html.parser')
@@ -64,15 +60,55 @@ def get_listing_information(listing_id):
     with open(file, encoding="utf-8") as f:
         data = f.read()
         soup = BeautifulSoup(data, 'html.parser')
-        policy_nums = soup.find_all("li", class_ = "f19phm7j dir dir-ltr")
+        policy_nums = soup.find("li", class_ = "f19phm7j dir dir-ltr")
         policy_list = []
-    # not working for policy numbers
-    for policy_num in policy_nums:
-        if policy_num.text == "Policy number:":
-            num = policy_num.find("span", class_ = "ll4r2nl dir dir-ltr")
-            policy_list.append(num.text)
-    return policy_list
+        place_type = soup.find("h2", class_ = "_14i3z6h")
+        place_list = []
+        bedroom_nums = soup.find_all("li", class_ = "l7n4lsf dir dir-ltr")[1]
+        nums = bedroom_nums.find_all("span")[2].text
+        nums_list = []
+        
+
+    # list of policy numbers
+
+    # policy_number = policy_nums.text
+    # for policy in policy_number: 
+    #     policy.removeprefix("Policy Number: ")
+    #     return policy
+    # return policy_list
+    policy_nums = policy_nums.text[15:]
+    policy_list = "".join(policy_nums)
+    final_list = []
+    if "pending" in policy_list or "Pending" in policy_list:
+        final_list.append("Pending")
+    elif "exempt" in policy_list or "not needed" in policy_list:
+        final_list.append("Exempt")
+    else:
+        final_list.append(policy_list)
     
+    place = place_type.text
+    # list of room types - i don't think its using the right part to find subtitle/ what is subtitle??
+    if "Private" in place or "private" in place:
+        place_list.append("Private Room")
+    elif "Shared" in place or "shared" in place:
+        place_list.append("Shared Room")
+    else: 
+        place_list.append("Entire Room")
+    # number of rooms
+    # if "Studio" in nums: 
+    #     nums_list.append(1)
+    # else:
+    #     nums_list.append(nums.strip(" bedroom"))
+    num_bedrooms = []
+    if nums == "studio" or nums == "Studio":
+        num_bedrooms.append(1)
+    else: 
+        num_bedrooms = nums.strip("bedroom")
+    # to make it into tuples
+    for i in range(len(nums)):
+        # took out int for nums
+        return (final_list[i], place_list[i], int(num_bedrooms[i]))
+
 
 
 
@@ -103,6 +139,14 @@ def get_listing_information(listing_id):
 
 
 def get_detailed_listing_database(html_file):
+    tuple_1 = get_listings_from_search_results(html_file)
+    combined_list = []
+    for tup in tuple_1:
+        listing_id = tup[2]
+        new_tup = (tup + get_listing_information(listing_id))
+        combined_list.append(new_tup)
+    return combined_list
+    
     """
     Write a function that calls the above two functions in order to return
     the complete listing information using the functions you’ve created.
@@ -208,7 +252,7 @@ class TestCases(unittest.TestCase):
                      "6600081"]
         # call get_listing_information for i in html_list:
         listing_informations = [get_listing_information(id) for id in html_list]
-        print(listing_informations)
+        # print(listing_informations)
         # check that the number of listing information is correct (5)
         self.assertEqual(len(listing_informations), 5)
         for listing_information in listing_informations:
@@ -222,31 +266,34 @@ class TestCases(unittest.TestCase):
             # check that the third element in the tuple is an int
             self.assertEqual(type(listing_information[2]), int)
         # check that the first listing in the html_list has policy number 'STR-0001541'
-
+        
+        self.assertEqual(listing_informations[0][0], "STR-0001541")
         # check that the last listing in the html_list is a "Private Room"
-
+        self.assertEqual(listing_informations[4][1], "Private Room")
         # check that the third listing has one bedroom
-
+        self.assertEqual(listing_informations[2][2], 1)
         pass
 
-    # def test_get_detailed_listing_database(self):
-    #     # call get_detailed_listing_database on "html_files/mission_district_search_results.html"
-    #     # and save it to a variable
-    #     detailed_database = get_detailed_listing_database("html_files/mission_district_search_results.html")
-    #     # check that we have the right number of listings (20)
-    #     self.assertEqual(len(detailed_database), 20)
-    #     for item in detailed_database:
-    #         # assert each item in the list of listings is a tuple
-    #         self.assertEqual(type(item), tuple)
-    #         # check that each tuple has a length of 6
+    def test_get_detailed_listing_database(self):
+        # call get_detailed_listing_database on "html_files/mission_district_search_results.html"
+        # and save it to a variable
+        detailed_database = get_detailed_listing_database("html_files/mission_district_search_results.html")
+        # print(detailed_database)
+        # check that we have the right number of listings (20)
+        self.assertEqual(len(detailed_database), 20)
+        for item in detailed_database:
+            # assert each item in the list of listings is a tuple
+            self.assertEqual(type(item), tuple)
+            # check that each tuple has a length of 6
+            self.assertEqual(len(item), 6)
+        # check that the first tuple is made up of the following:
+        self.assertEqual(detailed_database[0], ('Loft in Mission District', 210, '1944564', '2022-004088STR', 'Entire Room', 1))
+        # 'Loft in Mission District', 210, '1944564', '2022-004088STR', 'Entire Room', 1
 
-    #     # check that the first tuple is made up of the following:
-    #     # 'Loft in Mission District', 210, '1944564', '2022-004088STR', 'Entire Room', 1
+        # check that the last tuple is made up of the following:
+        # 'Guest suite in Mission District', 238, '32871760', 'STR-0004707', 'Entire Room', 1
 
-    #     # check that the last tuple is made up of the following:
-    #     # 'Guest suite in Mission District', 238, '32871760', 'STR-0004707', 'Entire Room', 1
-
-    #     pass
+        pass
 
     # def test_write_csv(self):
     #     # call get_detailed_listing_database on "html_files/mission_district_search_results.html"
