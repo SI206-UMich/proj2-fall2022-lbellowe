@@ -5,6 +5,9 @@ import re
 import os
 import csv
 import unittest
+# Name: Lindsey Bellowe 
+# UMID: 53031366
+# Worked with: Leah Feilbogen
 
 
 def get_listings_from_search_results(html_file):
@@ -245,6 +248,28 @@ def check_policy_numbers(data):
 
 
 def extra_credit(listing_id):
+    lst = []
+    d = {}
+    file_name = "html_files/listing_"+str(listing_id)+"_reviews.html"
+    with open(file_name) as f:
+        soup = BeautifulSoup(f, 'html.parser')
+        date = soup.find_all("li", class_ = "_1f1oir5")
+    pattern = r"(?=(\d{4}))"
+    for i in date:
+        i = i.text
+        results = re.findall(pattern, i)
+        lst.append(results)
+    for x in lst:
+        for i in x:
+            d[i] = d.get(i,0) + 1
+    for frequency in d.values():
+        if frequency <= 90:
+            continue
+        else:
+            return False
+    return True
+    
+
     """
     There are few exceptions to the requirement of listers obtaining licenses
     before listing their property for short term leases. One specific exception
@@ -368,6 +393,15 @@ class TestCases(unittest.TestCase):
         # check that the first element in the list is '16204265'
         self.assertEqual(invalid_listings[0], '16204265')
 
+    def test_extra_credit(self):
+        review = extra_credit(16204265)
+        review2 = extra_credit(1944564)
+        # print(review)
+        # print(review2)
+        self.assertEqual(review, False)
+        self.assertEqual(review2, True)
+        
+        # print(review2)
 
 if __name__ == '__main__':
     database = get_detailed_listing_database("html_files/mission_district_search_results.html")
